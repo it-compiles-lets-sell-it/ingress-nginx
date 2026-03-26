@@ -1,0 +1,41 @@
+name: Run Build Script
+
+# Permissions required for:
+# - reading repo contents
+# - pushing images to GHCR
+permissions:
+  contents: read
+  packages: write
+
+on:
+  # Run on every push to main and allow manual trigger
+  push:
+    branches:
+      - main
+  workflow_dispatch: {}
+
+jobs:
+  build-images:
+    runs-on: ubuntu-latest
+
+    steps:
+      # Checkout repository + submodules
+      - name: Checkout repository with submodules
+        uses: actions/checkout@v5
+        with:
+          submodules: recursive
+          fetch-depth: 1
+
+      # Authenticate to GitHub Container Registry for pushing images
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # Build and push Kubernetes images
+      - name: Run image build
+        run: |
+          set -euxo pipefail
+          ./build-multi.sh v1.32.13 \
